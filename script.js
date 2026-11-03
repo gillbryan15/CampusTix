@@ -1,7 +1,7 @@
 /* CampusTix app logic
    Sections: data, helpers, participant screens, organizer screens, QR scanning. */
 
-const $=s=>document.querySelector(s),KEY='campustix_v1',FEE=0.5;
+const $=s=>document.querySelector(s),KEY='campustix_profile',API='api.php',FEE=0.5;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const G=['#c7d2fe,#a5b4fc','#fbcfe8,#f9a8d4','#bbf7d0,#86efac','#fde68a,#fcd34d','#bae6fd,#7dd3fc','#ddd6fe,#c4b5fd'];
 const seed=()=>({events:[
@@ -11,8 +11,31 @@ const seed=()=>({events:[
 {id:'e4',title:'Career Talk: Tech Industry',date:'2026-12-02T14:00',venue:'Dewan Kuliah A',price:0,cap:150,emoji:'🎤',desc:'Free talk with industry speakers.'},
 {id:'e5',title:'Charity Futsal Cup',date:'2026-12-06T08:00',venue:'Gelanggang Futsal',price:20,cap:64,emoji:'⚽',desc:'Team registration. All proceeds go to charity.'},
 {id:'e6',title:'Photography Workshop',date:'2026-12-12T10:00',venue:'Studio Media',price:15,cap:40,emoji:'📷',desc:'Hands-on workshop with a pro photographer.'}],regs:[],profile:{}});
-let S;try{S=JSON.parse(localStorage.getItem(KEY))||seed()}catch(e){S=seed()}
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+/* ---------- Shared data (synced with api.php) ---------- */
+let S={events:[],regs:[],profile:{}},server={events:[],regs:[]},pending=0;
+try{S.profile=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){}
+const copy=o=>JSON.parse(JSON.stringify(o));
+// What changed in collection c since the last server snapshot
+function diff(c){
+ const old=new Map(server[c].map(x=>[x.id,JSON.stringify(x)])),now=new Set(S[c].map(x=>x.id));
+ return{upsert:S[c].filter(x=>old.get(x.id)!==JSON.stringify(x)),delete:[...old.keys()].filter(id=>!now.has(id))}}
+function adopt(d){S.events=d.events;S.regs=d.regs;server=copy(d)}
+async function save(extra){
+ try{localStorage.setItem(KEY,JSON.stringify(S.profile))}catch(e){}
+ pending++;
+ try{const r=await fetch(API,{method:'POST',body:JSON.stringify({events:diff('events'),regs:diff('regs'),...extra})});adopt(await r.json())}
+ catch(e){toast('Cannot reach the server')}
+ pending--}
+// Every 3 seconds, pull in changes made by other users and redraw if anything changed
+async function poll(){
+ if(pending)return;
+ try{const d=await(await fetch(API)).json();
+  if(JSON.stringify([d.events,d.regs])!==JSON.stringify([server.events,server.regs])){adopt(d);render()}}catch(e){}}
+async function init(){
+ try{const d=await(await fetch(API)).json();adopt(d);
+  if(!d.init){S.events=seed().events;await save({init:true})}}
+ catch(e){toast('Server not reachable. Open this through XAMPP.')}
+ render();setInterval(poll,3000)}
 let role='p',tab='browse',q='',view=null;
 const fmt=d=>new Date(d).toLocaleString('en-MY',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'});
 const rm=n=>n?'RM'+Number(n).toFixed(2):'Free';
@@ -57,7 +80,7 @@ function pay(id){const e=ev(id),v=k=>$('#f_'+k).value.trim(),err=m=>$('#err').te
  if(left(e)<=0)return err('Sorry, this event is full.');
  S.profile=p;
  open(`<div class="c"><div class="spin"></div><b>Processing payment…</b></div>`);
- setTimeout(()=>{const r={...p,id:'r'+Date.now(),eid:id,code:'CT-'+id.toUpperCase()+'-'+Math.random().toString(36).slice(2,8).toUpperCase(),paid:e.price?e.price+FEE:0,at:Date.now(),in:null};
+ setTimeout(()=>{const r={...p,id:'r'+Date.now()+Math.random().toString(36).slice(2,5),eid:id,code:'CT-'+id.toUpperCase()+'-'+Math.random().toString(36).slice(2,8).toUpperCase(),paid:e.price?e.price+FEE:0,at:Date.now(),in:null};
   S.regs.push(r);save();done(r,true)},1300)}
 function done(r,anim){const e=ev(r.eid);
  open(`<div class="c ${anim?'pop':''}">${anim?`<svg class="chk" viewBox="0 0 52 52"><circle cx="26" cy="26" r="25"/><path d="M14 27l8 8 16-17"/></svg><h2>Payment Completed</h2><div class="mut">You’re in! Show this QR at the urusetia table.</div>`:`<h2>${esc(e.title)}</h2>`}
@@ -86,7 +109,7 @@ function form(id){const e=id?ev(id):{title:'',date:'',venue:'',price:0,cap:100,e
 function saveEv(id){const v=k=>$('#g_'+k).value.trim();
  const o={title:v('t'),date:v('d'),venue:v('v'),price:Math.max(0,+v('p')||0),cap:Math.max(1,+v('c')||1),emoji:v('x')||'🎉',desc:v('s')};
  if(!o.title||!o.date||!o.venue)return $('#err').textContent='Title, date and venue are required.';
- if(id)Object.assign(ev(id),o);else S.events.push({id:'e'+Date.now(),...o});
+ if(id)Object.assign(ev(id),o);else S.events.push({id:'e'+Date.now()+Math.random().toString(36).slice(2,5),...o});
  save();closeModal();render();toast('Event saved')}
 function del(id){if(!confirm('Delete this event and its registrations?'))return;S.events=S.events.filter(e=>e.id!==id);S.regs=S.regs.filter(r=>r.eid!==id);save();render()}
 let sq='';
@@ -124,4 +147,4 @@ function fromImg(i){const f=i.files[0];if(!f)return;const im=new Image();
  im.onload=()=>{const cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;const cx=cv.getContext('2d');cx.drawImage(im,0,0);
   const d=cx.getImageData(0,0,cv.width,cv.height),c=jsQR(d.data,d.width,d.height);toast(c?checkIn(c.data).msg:'No QR found in that photo');URL.revokeObjectURL(im.src)};
  im.src=URL.createObjectURL(f);i.value=''}
-render();
+init();
