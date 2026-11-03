@@ -42,7 +42,7 @@ const rm=n=>n?'RM'+Number(n).toFixed(2):'Free';
 const left=e=>e.cap-S.regs.filter(r=>r.eid===e.id).length;
 const ev=id=>S.events.find(e=>e.id===id);
 function toast(t){const x=$('#toast');x.textContent=t;x.style.display='block';setTimeout(()=>x.style.display='none',2200)}
-function open(h){$('#md').innerHTML=h;$('#ov').classList.add('on');document.querySelectorAll('[data-qr]').forEach(el=>{el.innerHTML='';new QRCode(el,{text:el.dataset.qr,width:180,height:180,colorDark:'#1f2a44',colorLight:'#ffffff'})})}
+function open(h){$('#md').innerHTML=h;$('#ov').classList.add('on');document.querySelectorAll('[data-qr]').forEach(el=>{el.innerHTML='';new QRCode(el,{text:el.dataset.qr,width:240,height:240,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.L})})}
 function closeModal(){stopCam();$('#ov').classList.remove('on')}
 $('#ov').onclick=e=>{if(e.target.id==='ov')closeModal()};
 $('#rp').onclick=()=>{role='p';tab='browse';view=null;$('#rp').className='on';$('#ro').className='';render()};
@@ -126,7 +126,7 @@ function detail(){const e=ev(view);if(!e){view=null;return dash()}
  <td><button class="btn ghost sm" onclick="tog('${r.id}')">${r.in?'Undo':'Check in'}</button></td></tr>`).join('')}</table></div>`:'<div class="empty">No participants yet. List is sorted A–Z.</div>'}`}
 function tog(id){const r=S.regs.find(x=>x.id===id);r.in=r.in?null:Date.now();save();render()}
 function checkIn(c){c=(c||'').trim().toUpperCase();const r=S.regs.find(x=>x.code===c&&x.eid===view);
- if(!r)return{ok:0,msg:'Code not found for this event'};
+ if(!r)return{ok:0,msg:S.regs.some(x=>x.code===c)?'Ticket is for a different event':'Unknown ticket: '+c.slice(0,20)};
  if(r.in)return{ok:0,msg:r.name+' already checked in'};
  r.in=Date.now();save();render();return{ok:1,msg:'✓ '+r.name+' checked in'}}
 function scan(){toast(checkIn($('#scan').value).msg)}
@@ -134,17 +134,18 @@ let stream=null,raf=0,lock=0;
 function stopCam(){cancelAnimationFrame(raf);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}}
 async function cam(){
  open(`<h2>Scan ticket</h2><div class="mut">Point the camera at the participant’s QR code. It keeps scanning until you tap Done.</div><video id="vid" playsinline muted style="width:100%;border-radius:14px;margin-top:12px;background:#000"></video><div id="res" class="c" style="min-height:28px;font-weight:700;margin-top:8px"></div><div class="row"><button class="btn ghost" onclick="closeModal()">Done</button></div>`);
- try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})}catch(e){$('#res').textContent='Camera blocked or unavailable. Open this page in your phone browser, or use Upload QR photo or type the code.';$('#res').style.color='#dc2626';return}
- const v=$('#vid');v.srcObject=stream;await v.play();
+ if(typeof jsQR==='undefined'){$('#res').textContent='Scanner library did not load. Check your internet connection and refresh.';$('#res').style.color='#dc2626';return}
+ try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}})}catch(e){$('#res').textContent='Camera blocked or unavailable. Open this page in your phone browser, or use Upload QR photo or type the code.';$('#res').style.color='#dc2626';return}
+ const v=$('#vid');v.srcObject=stream;await v.play();$('#res').textContent='Scanning… hold the QR steady and fill the frame';
  const cv=document.createElement('canvas'),cx=cv.getContext('2d',{willReadFrequently:true});
  const tick=()=>{if(!stream)return;
   if(v.videoWidth&&Date.now()>lock){cv.width=v.videoWidth;cv.height=v.videoHeight;cx.drawImage(v,0,0);
-   const d=cx.getImageData(0,0,cv.width,cv.height),c=jsQR(d.data,d.width,d.height);
+   const d=cx.getImageData(0,0,cv.width,cv.height),c=jsQR(d.data,d.width,d.height,{inversionAttempts:'attemptBoth'});
    if(c){lock=Date.now()+1800;const r=checkIn(c.data),el=$('#res');el.textContent=r.msg;el.style.color=r.ok?'var(--ok)':'#dc2626'}}
   raf=requestAnimationFrame(tick)};
  tick()}
-function fromImg(i){const f=i.files[0];if(!f)return;const im=new Image();
+function fromImg(i){const f=i.files[0];if(!f)return;if(typeof jsQR==='undefined')return toast('Scanner library did not load. Refresh the page.');const im=new Image();
  im.onload=()=>{const cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;const cx=cv.getContext('2d');cx.drawImage(im,0,0);
-  const d=cx.getImageData(0,0,cv.width,cv.height),c=jsQR(d.data,d.width,d.height);toast(c?checkIn(c.data).msg:'No QR found in that photo');URL.revokeObjectURL(im.src)};
+  const d=cx.getImageData(0,0,cv.width,cv.height),c=jsQR(d.data,d.width,d.height,{inversionAttempts:'attemptBoth'});toast(c?checkIn(c.data).msg:'No QR found in that photo');URL.revokeObjectURL(im.src)};
  im.src=URL.createObjectURL(f);i.value=''}
 init();
