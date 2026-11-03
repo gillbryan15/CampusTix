@@ -442,3 +442,20 @@ th {
   display:none;
   z-index:99;
 }
+
+/* Organizer filters and group headings */
+.bar select {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.grp {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0 8px;
+}
+
+.grp h3 {
+  margin: 0;
+}
