@@ -1,62 +1,6 @@
-<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>CampusTix</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
-<style>
-:root{color-scheme:light;--bg:#f6f7fb;--card:#fff;--tx:#1f2a44;--mut:#6b7590;--pri:#5b5bf0;--pri2:#8a6cf5;--ok:#16a34a;--bd:#e6e8f0;--sh:0 6px 24px rgba(31,42,68,.08);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#12141c;--card:#1b1e2a;--tx:#eef0f8;--mut:#9aa3bd;--bd:#2a2e3d;--sh:0 6px 24px rgba(0,0,0,.4)}}
-*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
-.wrap{max-width:1040px;margin:0 auto;padding:20px 16px 60px}
-header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:8px}
-.logo{font-size:26px;font-weight:800;letter-spacing:-.5px}.logo span{background:linear-gradient(90deg,var(--pri),var(--pri2));-webkit-background-clip:text;background-clip:text;color:transparent}
-.seg{display:inline-flex;background:var(--card);border:1px solid var(--bd);border-radius:999px;padding:4px}
-.seg button{border:0;background:none;color:var(--mut);padding:7px 16px;border-radius:999px;font:inherit;font-weight:600;cursor:pointer}
-.seg button.on{background:linear-gradient(90deg,var(--pri),var(--pri2));color:#fff}
-hr{border:0;border-top:2px solid var(--bd);margin:12px 0 18px}
-.tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
-.tab{border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:8px 16px;border-radius:12px;font:inherit;font-weight:600;cursor:pointer}.tab.on{border-color:var(--pri);color:var(--pri)}
-input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--pri);border-color:transparent}
-label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 4px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px}
-.card{background:var(--card);border-radius:18px;box-shadow:var(--sh);overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--bd)}
-.banner{height:96px;display:flex;align-items:center;justify-content:center;font-size:42px}
-.cb{padding:16px;display:flex;flex-direction:column;gap:6px;flex:1}
-.cb h3{margin:0;font-size:17px}.mut{color:var(--mut);font-size:13px}
-.row{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:auto;padding-top:10px;flex-wrap:wrap}
-.price{font-weight:800;font-size:17px}
-.btn{border:0;border-radius:12px;padding:10px 18px;font:inherit;font-weight:700;cursor:pointer;background:linear-gradient(90deg,var(--pri),var(--pri2));color:#fff}
-.btn:disabled{opacity:.5;cursor:default}
-.btn.ghost{background:none;color:var(--pri);border:1px solid var(--bd)}.btn.sm{padding:6px 12px;font-size:13px}.btn.red{color:#dc2626}
-.pill{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--bg);color:var(--mut);width:max-content}
-.pill.ok{background:rgba(22,163,74,.15);color:var(--ok)}
-.ov{position:fixed;inset:0;background:rgba(10,12,20,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:50;overflow:auto}
-.ov.on{display:flex}
-.modal{background:var(--card);border-radius:20px;padding:24px;width:100%;max-width:440px;max-height:92vh;overflow:auto;box-shadow:var(--sh)}
-.modal h2{margin:0 0 4px}.c{text-align:center}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.qr{display:flex;justify-content:center;padding:16px;background:#fff;border-radius:16px;margin:12px auto;width:max-content}
-.tw{overflow-x:auto;background:var(--card);border-radius:16px;border:1px solid var(--bd)}
-table{width:100%;border-collapse:collapse;min-width:640px}th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--bd);font-size:14px}th{color:var(--mut);font-size:12px;text-transform:uppercase}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:14px 0}
-.stat{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px}.stat b{font-size:24px;display:block}
-.empty{text-align:center;color:var(--mut);padding:40px 0}
-.bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}.bar input{flex:1;min-width:180px}
-.chk{width:84px;height:84px;margin:8px auto;display:block}
-.chk circle{stroke:var(--ok);stroke-width:4;fill:none;stroke-dasharray:166;stroke-dashoffset:166;animation:s .6s ease forwards}
-.chk path{stroke:var(--ok);stroke-width:5;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:48;stroke-dashoffset:48;animation:s .4s .5s ease forwards}
-.pop{animation:p .5s ease}.spin{width:44px;height:44px;border:4px solid var(--bd);border-top-color:var(--pri);border-radius:50%;margin:30px auto;animation:r 1s linear infinite}
-@keyframes s{to{stroke-dashoffset:0}}@keyframes p{0%{transform:scale(.9);opacity:0}100%{transform:none;opacity:1}}@keyframes r{to{transform:rotate(360deg)}}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 18px;border-radius:12px;font-weight:600;display:none;z-index:99}
-</style></head><body><div class="wrap">
-<header><div class="logo">Campus<span>Tix</span></div>
-<div class="seg"><button id="rp" class="on">Participant</button><button id="ro">Organizer</button></div></header>
-<hr><div id="tabs" class="tabs"></div><div id="main"></div></div>
-<div id="ov" class="ov"><div id="md" class="modal"></div></div><div id="toast" class="toast"></div>
-<script>
+/* CampusTix app logic
+   Sections: data, helpers, participant screens, organizer screens, QR scanning. */
+
 const $=s=>document.querySelector(s),KEY='campustix_v1',FEE=0.5;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const G=['#c7d2fe,#a5b4fc','#fbcfe8,#f9a8d4','#bbf7d0,#86efac','#fde68a,#fcd34d','#bae6fd,#7dd3fc','#ddd6fe,#c4b5fd'];
@@ -76,8 +20,8 @@ const left=e=>e.cap-S.regs.filter(r=>r.eid===e.id).length;
 const ev=id=>S.events.find(e=>e.id===id);
 function toast(t){const x=$('#toast');x.textContent=t;x.style.display='block';setTimeout(()=>x.style.display='none',2200)}
 function open(h){$('#md').innerHTML=h;$('#ov').classList.add('on');document.querySelectorAll('[data-qr]').forEach(el=>{el.innerHTML='';new QRCode(el,{text:el.dataset.qr,width:180,height:180,colorDark:'#1f2a44',colorLight:'#ffffff'})})}
-function close(){stopCam();$('#ov').classList.remove('on')}
-$('#ov').onclick=e=>{if(e.target.id==='ov')close()};
+function closeModal(){stopCam();$('#ov').classList.remove('on')}
+$('#ov').onclick=e=>{if(e.target.id==='ov')closeModal()};
 $('#rp').onclick=()=>{role='p';tab='browse';view=null;$('#rp').className='on';$('#ro').className='';render()};
 $('#ro').onclick=()=>{role='o';tab='dash';view=null;$('#ro').className='on';$('#rp').className='';render()};
 function render(){
@@ -103,7 +47,7 @@ function reg(id){const e=ev(id),p=S.profile;
  <label>Email</label><input id="f_e" type="email" value="${esc(p.email)}">
  <div class="mut" style="margin-top:14px">Ticket ${rm(e.price)}${e.price?` + platform fee ${rm(FEE)}`:''}</div>
  <div id="err" style="color:#dc2626;font-size:13px;min-height:18px"></div>
- <div class="row"><button class="btn ghost" onclick="close()">Cancel</button><button class="btn" onclick="pay('${id}')">${e.price?'Pay '+rm(e.price+FEE):'Get free ticket'}</button></div>`)}
+ <div class="row"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="pay('${id}')">${e.price?'Pay '+rm(e.price+FEE):'Get free ticket'}</button></div>`)}
 function pay(id){const e=ev(id),v=k=>$('#f_'+k).value.trim(),err=m=>$('#err').textContent=m;
  const p={name:v('n'),matric:v('m').toUpperCase(),phone:v('p'),email:v('e')};
  if(!p.name||!p.matric||!p.phone||!p.email)return err('Please fill in all fields.');
@@ -118,7 +62,7 @@ function pay(id){const e=ev(id),v=k=>$('#f_'+k).value.trim(),err=m=>$('#err').te
 function done(r,anim){const e=ev(r.eid);
  open(`<div class="c ${anim?'pop':''}">${anim?`<svg class="chk" viewBox="0 0 52 52"><circle cx="26" cy="26" r="25"/><path d="M14 27l8 8 16-17"/></svg><h2>Payment Completed</h2><div class="mut">You’re in! Show this QR at the urusetia table.</div>`:`<h2>${esc(e.title)}</h2>`}
  <div class="qr" data-qr="${r.code}"></div><b>${esc(r.name)}</b><div class="mut">${esc(r.matric)} · ${r.code}</div>
- <div class="row" style="justify-content:center"><button class="btn" onclick="close();tab='tickets';render()">${anim?'View my tickets':'Close'}</button></div></div>`);render()}
+ <div class="row" style="justify-content:center"><button class="btn" onclick="closeModal();tab='tickets';render()">${anim?'View my tickets':'Close'}</button></div></div>`);render()}
 function tickets(){
  const m=(S.profile.matric||'').toUpperCase(),L=S.regs.filter(r=>r.matric===m);
  if(!L.length)return `<div class="empty">No tickets yet. Register for an event to get your QR.</div>`;
@@ -138,12 +82,12 @@ function form(id){const e=id?ev(id):{title:'',date:'',venue:'',price:0,cap:100,e
  <label>Venue</label><input id="g_v" value="${esc(e.venue)}">
  <div class="two"><div><label>Price (RM, 0 = free)</label><input id="g_p" type="number" min="0" step="0.5" value="${e.price}"></div><div><label>Capacity</label><input id="g_c" type="number" min="1" value="${e.cap}"></div></div>
  <label>Description</label><textarea id="g_s" rows="3">${esc(e.desc)}</textarea><div id="err" style="color:#dc2626;font-size:13px;min-height:18px"></div>
- <div class="row"><button class="btn ghost" onclick="close()">Cancel</button><button class="btn" onclick="saveEv('${id||''}')">Save</button></div>`)}
+ <div class="row"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveEv('${id||''}')">Save</button></div>`)}
 function saveEv(id){const v=k=>$('#g_'+k).value.trim();
  const o={title:v('t'),date:v('d'),venue:v('v'),price:Math.max(0,+v('p')||0),cap:Math.max(1,+v('c')||1),emoji:v('x')||'🎉',desc:v('s')};
  if(!o.title||!o.date||!o.venue)return $('#err').textContent='Title, date and venue are required.';
  if(id)Object.assign(ev(id),o);else S.events.push({id:'e'+Date.now(),...o});
- save();close();render();toast('Event saved')}
+ save();closeModal();render();toast('Event saved')}
 function del(id){if(!confirm('Delete this event and its registrations?'))return;S.events=S.events.filter(e=>e.id!==id);S.regs=S.regs.filter(r=>r.eid!==id);save();render()}
 let sq='';
 function detail(){const e=ev(view);if(!e){view=null;return dash()}
@@ -166,7 +110,7 @@ function scan(){toast(checkIn($('#scan').value).msg)}
 let stream=null,raf=0,lock=0;
 function stopCam(){cancelAnimationFrame(raf);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}}
 async function cam(){
- open(`<h2>Scan ticket</h2><div class="mut">Point the camera at the participant’s QR code. It keeps scanning until you tap Done.</div><video id="vid" playsinline muted style="width:100%;border-radius:14px;margin-top:12px;background:#000"></video><div id="res" class="c" style="min-height:28px;font-weight:700;margin-top:8px"></div><div class="row"><button class="btn ghost" onclick="close()">Done</button></div>`);
+ open(`<h2>Scan ticket</h2><div class="mut">Point the camera at the participant’s QR code. It keeps scanning until you tap Done.</div><video id="vid" playsinline muted style="width:100%;border-radius:14px;margin-top:12px;background:#000"></video><div id="res" class="c" style="min-height:28px;font-weight:700;margin-top:8px"></div><div class="row"><button class="btn ghost" onclick="closeModal()">Done</button></div>`);
  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})}catch(e){$('#res').textContent='Camera blocked or unavailable. Open this page in your phone browser, or use Upload QR photo or type the code.';$('#res').style.color='#dc2626';return}
  const v=$('#vid');v.srcObject=stream;await v.play();
  const cv=document.createElement('canvas'),cx=cv.getContext('2d',{willReadFrequently:true});
@@ -181,4 +125,3 @@ function fromImg(i){const f=i.files[0];if(!f)return;const im=new Image();
   const d=cx.getImageData(0,0,cv.width,cv.height),c=jsQR(d.data,d.width,d.height);toast(c?checkIn(c.data).msg:'No QR found in that photo');URL.revokeObjectURL(im.src)};
  im.src=URL.createObjectURL(f);i.value=''}
 render();
-</script></body></html>
