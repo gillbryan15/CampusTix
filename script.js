@@ -27,15 +27,16 @@ async function save(extra){
  catch(e){toast('Cannot reach the server')}
  pending--}
 // Every 3 seconds, pull in changes made by other users and redraw if anything changed
+let shownTicket=null; // id of the ticket whose QR is open on this device
 async function poll(){
  if(pending)return;
  try{const d=await(await fetch(API)).json();
-  if(JSON.stringify([d.events,d.regs])!==JSON.stringify([server.events,server.regs])){adopt(d);render()}}catch(e){}}
+  if(JSON.stringify([d.events,d.regs])!==JSON.stringify([server.events,server.regs])){adopt(d);render();if(shownTicket){const t=S.regs.find(x=>x.id===shownTicket);if(t&&t.in)checkedInView(t)}}}catch(e){}}
 async function init(){
  try{const d=await(await fetch(API)).json();adopt(d);
   if(!d.init){S.events=seed().events;await save({init:true})}}
  catch(e){toast('Server not reachable. Open this through XAMPP.')}
- render();setInterval(poll,3000)}
+ render();setInterval(poll,2000)}
 let role='p',tab='browse',q='',view=null;
 const fmt=d=>new Date(d).toLocaleString('en-MY',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'});
 const rm=n=>n?'RM'+Number(n).toFixed(2):'Free';
@@ -43,7 +44,7 @@ const left=e=>e.cap-S.regs.filter(r=>r.eid===e.id).length;
 const ev=id=>S.events.find(e=>e.id===id);
 function toast(t){const x=$('#toast');x.textContent=t;x.style.display='block';setTimeout(()=>x.style.display='none',2200)}
 function open(h){$('#md').innerHTML=h;$('#ov').classList.add('on');document.querySelectorAll('[data-qr]').forEach(el=>{el.innerHTML='';new QRCode(el,{text:el.dataset.qr,width:240,height:240,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.L})})}
-function closeModal(){stopCam();$('#ov').classList.remove('on')}
+function closeModal(){shownTicket=null;stopCam();$('#ov').classList.remove('on')}
 $('#ov').onclick=e=>{if(e.target.id==='ov')closeModal()};
 $('#rp').onclick=()=>{role='p';tab='browse';view=null;$('#rp').className='on';$('#ro').className='';render()};
 $('#ro').onclick=()=>{role='o';tab='dash';view=null;$('#ro').className='on';$('#rp').className='';render()};
@@ -83,6 +84,8 @@ function pay(id){const e=ev(id),v=k=>$('#f_'+k).value.trim(),err=m=>$('#err').te
  setTimeout(()=>{const r={...p,id:'r'+Date.now()+Math.random().toString(36).slice(2,5),eid:id,code:'CT-'+id.toUpperCase()+'-'+Math.random().toString(36).slice(2,8).toUpperCase(),paid:e.price?e.price+FEE:0,at:Date.now(),in:null};
   S.regs.push(r);save();done(r,true)},1300)}
 function done(r,anim){const e=ev(r.eid);
+ if(r.in&&!anim)return checkedInView(r);
+ shownTicket=r.id;
  open(`<div class="c ${anim?'pop':''}">${anim?`<svg class="chk" viewBox="0 0 52 52"><circle cx="26" cy="26" r="25"/><path d="M14 27l8 8 16-17"/></svg><h2>Payment Completed</h2><div class="mut">You’re in! Show this QR at the urusetia table.</div>`:`<h2>${esc(e.title)}</h2>`}
  <div class="qr" data-qr="${r.code}"></div><b>${esc(r.name)}</b><div class="mut">${esc(r.matric)} · ${r.code}</div>
  <div class="row" style="justify-content:center"><button class="btn" onclick="closeModal();tab='tickets';render()">${anim?'View my tickets':'Close'}</button></div></div>`);render()}
@@ -128,9 +131,9 @@ function tog(id){const r=S.regs.find(x=>x.id===id);r.in=r.in?null:Date.now();sav
 function checkIn(c){c=(c||'').trim().toUpperCase();const r=S.regs.find(x=>x.code===c&&x.eid===view);
  if(!r)return{ok:0,msg:S.regs.some(x=>x.code===c)?'Ticket is for a different event':'Unknown ticket: '+c.slice(0,20)};
  if(r.in)return{ok:0,msg:r.name+' already checked in'};
- r.in=Date.now();save();render();return{ok:1,msg:'✓ '+r.name+' checked in'}}
-function scan(){toast(checkIn($('#scan').value).msg)}
-let stream=null,raf=0,lock=0;
+ r.in=Date.now();save();render();return{ok:1,reg:r,msg:'✓ '+r.name+' checked in'}}
+function scan(){flash(checkIn($('#scan').value))}
+let stream=null,raf=0,lock=0,last={code:'',until:0};
 function stopCam(){cancelAnimationFrame(raf);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}}
 async function cam(){
  open(`<h2>Scan ticket</h2><div class="mut">Point the camera at the participant’s QR code. It keeps scanning until you tap Done.</div><video id="vid" playsinline muted style="width:100%;border-radius:14px;margin-top:12px;background:#000"></video><div id="res" class="c" style="min-height:28px;font-weight:700;margin-top:8px"></div><div class="row"><button class="btn ghost" onclick="closeModal()">Done</button></div>`);
@@ -141,11 +144,30 @@ async function cam(){
  const tick=()=>{if(!stream)return;
   if(v.videoWidth&&Date.now()>lock){cv.width=v.videoWidth;cv.height=v.videoHeight;cx.drawImage(v,0,0);
    const d=cx.getImageData(0,0,cv.width,cv.height),c=jsQR(d.data,d.width,d.height,{inversionAttempts:'attemptBoth'});
-   if(c){lock=Date.now()+1800;const r=checkIn(c.data),el=$('#res');el.textContent=r.msg;el.style.color=r.ok?'var(--ok)':'#dc2626'}}
+   if(c&&!(c.data===last.code&&Date.now()<last.until)){last={code:c.data,until:Date.now()+6000};lock=Date.now()+1500;flash(checkIn(c.data))}}
   raf=requestAnimationFrame(tick)};
  tick()}
 function fromImg(i){const f=i.files[0];if(!f)return;if(typeof jsQR==='undefined')return toast('Scanner library did not load. Refresh the page.');const im=new Image();
  im.onload=()=>{const cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;const cx=cv.getContext('2d');cx.drawImage(im,0,0);
-  const d=cx.getImageData(0,0,cv.width,cv.height),c=jsQR(d.data,d.width,d.height,{inversionAttempts:'attemptBoth'});toast(c?checkIn(c.data).msg:'No QR found in that photo');URL.revokeObjectURL(im.src)};
+  const d=cx.getImageData(0,0,cv.width,cv.height),c=jsQR(d.data,d.width,d.height,{inversionAttempts:'attemptBoth'});c?flash(checkIn(c.data)):toast('No QR found in that photo');URL.revokeObjectURL(im.src)};
  im.src=URL.createObjectURL(f);i.value=''}
+/* ---------- Check-in feedback ---------- */
+// Organizer: after each scan, close the camera and pop up the result (green check or red cross)
+const CHK='<svg class="chk" viewBox="0 0 52 52"><circle cx="26" cy="26" r="25"/><path d="M14 27l8 8 16-17"/></svg>';
+const CROSS='<svg class="chk" viewBox="0 0 52 52" style="--ok:#dc2626"><circle cx="26" cy="26" r="25"/><path d="M17 17l18 18M35 17L17 35" style="stroke-dasharray:60;stroke-dashoffset:60"/></svg>';
+function flash(r){
+ stopCam(); // 1) release the camera
+ const g=r.reg,e=g?ev(g.eid):null;
+ open(`<div class="c pop">${r.ok?CHK:CROSS}<h2>${r.ok?'Check-in Completed':'Check-in Failed'}</h2>
+  ${r.ok?`<b>${esc(g.name)}</b><div class="mut">${esc(g.matric)}</div><div class="mut">${esc(e?e.title:'')}</div>`:`<div class="mut">${esc(r.msg)}</div>`}
+  <div class="row" style="justify-content:center;margin-top:14px"><button class="btn ghost" onclick="closeModal()">Done</button><button class="btn" onclick="cam()">Scan next</button></div></div>`); // 2) then show the popup
+ beep(r.ok);if(navigator.vibrate)navigator.vibrate(r.ok?80:[60,40,60])}
+function beep(ok){
+ try{const a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator();o.frequency.value=ok?880:300;o.connect(a.destination);o.start();setTimeout(()=>{o.stop();a.close()},ok?120:260)}catch(e){}}
+// Participant: replaces the QR with a confirmation once the organizer has scanned it
+function checkedInView(r){
+ const e=ev(r.eid)||{title:''};closeModal(); // 1) close the QR
+ setTimeout(()=>open(`<div class="c pop"><svg class="chk" viewBox="0 0 52 52"><circle cx="26" cy="26" r="25"/><path d="M14 27l8 8 16-17"/></svg><h2>Check-in Completed</h2><b>${esc(r.name)}</b><div class="mut">${esc(e.title)}</div><div class="mut">Hadir ${new Date(r.in).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit'})}</div><div class="row" style="justify-content:center"><button class="btn" onclick="closeModal()">Close</button></div></div>`),350); // 2) then pop up the confirmation
+ if(navigator.vibrate)navigator.vibrate(120)}
+
 init();
